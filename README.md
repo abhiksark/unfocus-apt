@@ -60,11 +60,9 @@ package; see the [install guide](https://github.com/abhiksark/unfocus/blob/main/
 On each published Unfocus prerelease, `abhiksark/unfocus` dispatches
 `unfocus-alpha-published` here. The update workflow downloads
 `Unfocus_*_amd64.deb` and `SHA256SUMS`, verifies the checksum, rebuilds the
-signed `alpha` suite, and opens a reviewable pull request. Merging that PR
-updates GitHub Pages.
+signed `alpha` suite, and pushes to `main` (GitHub Pages).
 
-Operator setup (secrets and the GitHub App) is documented in the Unfocus
-repository under `.github/AGENTS.md` (APT automation boundary).
+Operator secrets are documented in `OPERATOR.md`.
 
 ## Local tests
 

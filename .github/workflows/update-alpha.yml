@@ -11,7 +11,7 @@ on:
         type: string
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: update-unfocus-alpha-apt
@@ -37,7 +37,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          persist-credentials: false
+          # GITHUB_TOKEN push to main after rebuilding the tree
+          persist-credentials: true
 
       - name: Install apt tooling
         run: |
@@ -170,113 +171,24 @@ jobs:
             echo "release_url=$(jq -r .release_url "$RUNNER_TEMP/update.json")"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Check for an existing automation branch
+      - name: Commit and push the apt tree to main
         if: steps.update.outputs.changed == 'true'
-        id: branch
         env:
           VERSION: ${{ steps.release.outputs.version }}
+          DEB_NAME: ${{ steps.update.outputs.deb_name }}
+          DEB_SHA256: ${{ steps.update.outputs.deb_sha256 }}
+          DEBIAN_VERSION: ${{ steps.update.outputs.debian_version }}
+          RELEASE_URL: ${{ steps.update.outputs.release_url }}
         run: |
           set -euo pipefail
-          BRANCH="automation/unfocus-alpha-$VERSION"
-          if git ls-remote --exit-code --heads origin "refs/heads/$BRANCH" >/dev/null 2>&1; then
-            git fetch --no-tags origin "refs/heads/$BRANCH:refs/remotes/origin/unfocus-alpha-update"
-            git show "refs/remotes/origin/unfocus-alpha-update:public-key.asc" \
-              > "$RUNNER_TEMP/remote-public-key.asc" 2>/dev/null || true
-            # Compare full apt tree snapshots via archive hashes
-            git archive --format=tar "refs/remotes/origin/unfocus-alpha-update" pool dists public-key.asc \
-              2>/dev/null | sha256sum | awk '{print $1}' > "$RUNNER_TEMP/remote.tree" || {
-              echo "$BRANCH exists but does not contain a complete apt tree." >&2
-              exit 1
-            }
-            tar -c pool dists public-key.asc 2>/dev/null | sha256sum | awk '{print $1}' > "$RUNNER_TEMP/local.tree"
-            cmp -s "$RUNNER_TEMP/remote.tree" "$RUNNER_TEMP/local.tree" || {
-              echo "$BRANCH already exists with different apt content." >&2
-              exit 1
-            }
-            BRANCH_EXISTS=true
-          else
-            BRANCH_EXISTS=false
-          fi
-          {
-            echo "name=$BRANCH"
-            echo "exists=$BRANCH_EXISTS"
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Mint an apt-repo-only GitHub App token
-        if: steps.update.outputs.changed == 'true'
-        id: app-token
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
-        with:
-          app-id: ${{ secrets.APT_APP_ID }}
-          private-key: ${{ secrets.APT_APP_PRIVATE_KEY }}
-          owner: abhiksark
-          permission-contents: write
-          permission-pull-requests: write
-          repositories: unfocus-apt
-
-      - name: Push the automation branch
-        if: steps.update.outputs.changed == 'true' && steps.branch.outputs.exists == 'false'
-        env:
-          APP_SLUG: ${{ steps.app-token.outputs['app-slug'] }}
-          APP_TOKEN: ${{ steps.app-token.outputs.token }}
-          BRANCH: ${{ steps.branch.outputs.name }}
-          VERSION: ${{ steps.release.outputs.version }}
-        run: |
-          set -euo pipefail
-          git config user.name "$APP_SLUG[bot]"
-          git config user.email "$APP_SLUG[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -- pool dists public-key.asc
           git diff --cached --quiet && {
             echo "Updater reported a change but produced no apt tree diff." >&2
             exit 1
           }
           git commit -m "Update unfocus alpha apt packages to $VERSION"
-          git push \
-            "https://x-access-token:${APP_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
-            "HEAD:refs/heads/$BRANCH"
-
-      - name: Open or recover the update pull request
-        if: steps.update.outputs.changed == 'true'
-        env:
-          BRANCH: ${{ steps.branch.outputs.name }}
-          DEB_NAME: ${{ steps.update.outputs.deb_name }}
-          DEB_SHA256: ${{ steps.update.outputs.deb_sha256 }}
-          DEBIAN_VERSION: ${{ steps.update.outputs.debian_version }}
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          RELEASE_URL: ${{ steps.update.outputs.release_url }}
-          VERSION: ${{ steps.release.outputs.version }}
-        run: |
-          set -euo pipefail
-          PRS=$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$BRANCH" --state all --limit 10 --json state,url)
-          COUNT=$(jq length <<<"$PRS")
-          if [ "$COUNT" -gt 1 ]; then
-            echo "Multiple pull requests already exist for $BRANCH." >&2
-            exit 1
-          fi
-          if [ "$COUNT" -eq 1 ]; then
-            STATE=$(jq -r '.[0].state' <<<"$PRS")
-            URL=$(jq -r '.[0].url' <<<"$PRS")
-            [ "$STATE" = OPEN ] || {
-              echo "$URL is $STATE; refusing to replace or reopen it automatically." >&2
-              exit 1
-            }
-            echo "Existing update pull request: $URL"
-            exit 0
-          fi
-
-          {
-            echo "Automated APT index update for [Unfocus $VERSION]($RELEASE_URL)."
-            echo
-            echo "Verified release artifact:"
-            echo
-            echo "- \`$DEB_NAME\` (Debian version \`$DEBIAN_VERSION\`): \`$DEB_SHA256\`"
-            echo
-            echo "The updater matched SHA256SUMS and rebuilt the signed alpha suite for GitHub Pages."
-            echo "Merge this pull request to publish the apt repository update."
-          } > "$RUNNER_TEMP/pr-body.md"
-          gh pr create \
-            --repo "$GITHUB_REPOSITORY" \
-            --base main \
-            --head "$BRANCH" \
-            --title "Update unfocus alpha apt packages to $VERSION" \
-            --body-file "$RUNNER_TEMP/pr-body.md"
+          git push origin "HEAD:main"
+          echo "Published $DEB_NAME ($DEBIAN_VERSION) from $RELEASE_URL"
+          echo "SHA256 $DEB_SHA256"
