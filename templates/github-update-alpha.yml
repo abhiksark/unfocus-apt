@@ -1,0 +1,282 @@
+name: Update alpha apt repository
+
+on:
+  repository_dispatch:
+    types: [unfocus-alpha-published]
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: Published Unfocus prerelease tag to bootstrap or recover
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: update-unfocus-alpha-apt
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install apt tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y dpkg-dev gnupg
+      - run: ./script/build_apt_repo_test.sh
+
+  update:
+    needs: test
+    runs-on: ubuntu-24.04
+    environment: apt-repo-automation
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install apt tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y dpkg-dev gnupg
+
+      - name: Import the archive signing key
+        id: gpg
+        env:
+          APT_SIGNING_KEY: ${{ secrets.APT_SIGNING_KEY }}
+          APT_SIGNING_KEY_PASSPHRASE: ${{ secrets.APT_SIGNING_KEY_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          [ -n "${APT_SIGNING_KEY:-}" ] || {
+            echo "APT_SIGNING_KEY secret is required in the apt-repo-automation environment." >&2
+            exit 1
+          }
+          export GNUPGHOME=$RUNNER_TEMP/gnupg
+          mkdir -p "$GNUPGHOME"
+          chmod 700 "$GNUPGHOME"
+          printenv APT_SIGNING_KEY | gpg --batch --import
+          KEY_ID=$(gpg --list-secret-keys --with-colons | awk -F: '/^sec:/ { print $5; exit }')
+          [ -n "$KEY_ID" ]
+          : > "$RUNNER_TEMP/gpg-passphrase"
+          if [ -n "${APT_SIGNING_KEY_PASSPHRASE:-}" ]; then
+            printenv APT_SIGNING_KEY_PASSPHRASE > "$RUNNER_TEMP/gpg-passphrase"
+          fi
+          chmod 600 "$RUNNER_TEMP/gpg-passphrase"
+          {
+            echo "key_id=$KEY_ID"
+            echo "gnupg_home=$GNUPGHOME"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Re-query the release and download required assets
+        id: release
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_TAG: ${{ inputs.tag_name }}
+          PAYLOAD_RELEASE_ID: ${{ github.event.client_payload.release_id }}
+          PAYLOAD_SOURCE_REPOSITORY: ${{ github.event.client_payload.source_repository }}
+          PAYLOAD_TAG: ${{ github.event.client_payload.tag_name }}
+        run: |
+          set -euo pipefail
+
+          if [ "$EVENT_NAME" = repository_dispatch ]; then
+            SOURCE_REPOSITORY=$PAYLOAD_SOURCE_REPOSITORY
+            RELEASE_ID=$PAYLOAD_RELEASE_ID
+            TAG_NAME=$PAYLOAD_TAG
+          else
+            SOURCE_REPOSITORY=abhiksark/unfocus
+            TAG_NAME=$INPUT_TAG
+            [[ "$TAG_NAME" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*$ ]] || {
+              echo "Manual runs require a v-prefixed prerelease tag." >&2
+              exit 1
+            }
+            RELEASE_ID=$(gh api "repos/$SOURCE_REPOSITORY/releases/tags/$TAG_NAME" --jq .id)
+          fi
+
+          [ "$SOURCE_REPOSITORY" = abhiksark/unfocus ] || {
+            echo "Unexpected source repository: $SOURCE_REPOSITORY" >&2
+            exit 1
+          }
+          [[ "$RELEASE_ID" =~ ^[0-9]+$ ]] || {
+            echo "Release id must be numeric." >&2
+            exit 1
+          }
+          [[ "$TAG_NAME" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*$ ]] || {
+            echo "Release tag is not a supported prerelease version." >&2
+            exit 1
+          }
+
+          gh api "repos/$SOURCE_REPOSITORY/releases/$RELEASE_ID" > "$RUNNER_TEMP/release.json"
+          DRAFT=$(jq -r .draft "$RUNNER_TEMP/release.json")
+          PRERELEASE=$(jq -r .prerelease "$RUNNER_TEMP/release.json")
+          PUBLISHED_AT=$(jq -r .published_at "$RUNNER_TEMP/release.json")
+          [ "$DRAFT" = false ] && [ "$PRERELEASE" = true ] && [ -n "$PUBLISHED_AT" ] || {
+            echo "$TAG_NAME is not a published, non-draft prerelease." >&2
+            exit 1
+          }
+
+          VERSION=${TAG_NAME#v}
+          mkdir -p "$RUNNER_TEMP/unfocus-assets"
+          for NAME in "Unfocus_${VERSION}_amd64.deb" SHA256SUMS; do
+            ASSET_ID=$(jq -r --arg name "$NAME" \
+              '[.assets[] | select(.name == $name) | .id] | if length == 1 then .[0] else error("expected exactly one matching asset for " + $name) end' \
+              "$RUNNER_TEMP/release.json")
+            gh api \
+              -H "Accept: application/octet-stream" \
+              "repos/$SOURCE_REPOSITORY/releases/assets/$ASSET_ID" \
+              > "$RUNNER_TEMP/unfocus-assets/$NAME"
+          done
+
+          {
+            echo "source_repository=$SOURCE_REPOSITORY"
+            echo "release_id=$RELEASE_ID"
+            echo "tag_name=$TAG_NAME"
+            echo "version=$VERSION"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Rebuild the alpha APT repository
+        id: update
+        env:
+          RELEASE_ID: ${{ steps.release.outputs.release_id }}
+          SOURCE_REPOSITORY: ${{ steps.release.outputs.source_repository }}
+          TAG_NAME: ${{ steps.release.outputs.tag_name }}
+          GNUPGHOME: ${{ steps.gpg.outputs.gnupg_home }}
+          GPG_KEY_ID: ${{ steps.gpg.outputs.key_id }}
+        run: |
+          set -euo pipefail
+          UPDATE_ARGS=(
+            --source-repository "$SOURCE_REPOSITORY"
+            --release-id "$RELEASE_ID"
+            --tag-name "$TAG_NAME"
+            --assets-dir "$RUNNER_TEMP/unfocus-assets"
+            --repo-root "$GITHUB_WORKSPACE"
+            --gpg-home "$GNUPGHOME"
+            --gpg-key-id "$GPG_KEY_ID"
+            --metadata "$RUNNER_TEMP/update.json"
+          )
+          if [ -s "$RUNNER_TEMP/gpg-passphrase" ]; then
+            UPDATE_ARGS+=(--passphrase-file "$RUNNER_TEMP/gpg-passphrase")
+          fi
+          ./script/update_alpha.sh "${UPDATE_ARGS[@]}"
+          {
+            echo "changed=$(jq -r .changed "$RUNNER_TEMP/update.json")"
+            echo "deb_name=$(jq -r .deb_name "$RUNNER_TEMP/update.json")"
+            echo "deb_sha256=$(jq -r .deb_sha256 "$RUNNER_TEMP/update.json")"
+            echo "debian_version=$(jq -r .debian_version "$RUNNER_TEMP/update.json")"
+            echo "release_url=$(jq -r .release_url "$RUNNER_TEMP/update.json")"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Check for an existing automation branch
+        if: steps.update.outputs.changed == 'true'
+        id: branch
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          set -euo pipefail
+          BRANCH="automation/unfocus-alpha-$VERSION"
+          if git ls-remote --exit-code --heads origin "refs/heads/$BRANCH" >/dev/null 2>&1; then
+            git fetch --no-tags origin "refs/heads/$BRANCH:refs/remotes/origin/unfocus-alpha-update"
+            git show "refs/remotes/origin/unfocus-alpha-update:public-key.asc" \
+              > "$RUNNER_TEMP/remote-public-key.asc" 2>/dev/null || true
+            # Compare full apt tree snapshots via archive hashes
+            git archive --format=tar "refs/remotes/origin/unfocus-alpha-update" pool dists public-key.asc \
+              2>/dev/null | sha256sum | awk '{print $1}' > "$RUNNER_TEMP/remote.tree" || {
+              echo "$BRANCH exists but does not contain a complete apt tree." >&2
+              exit 1
+            }
+            tar -c pool dists public-key.asc 2>/dev/null | sha256sum | awk '{print $1}' > "$RUNNER_TEMP/local.tree"
+            cmp -s "$RUNNER_TEMP/remote.tree" "$RUNNER_TEMP/local.tree" || {
+              echo "$BRANCH already exists with different apt content." >&2
+              exit 1
+            }
+            BRANCH_EXISTS=true
+          else
+            BRANCH_EXISTS=false
+          fi
+          {
+            echo "name=$BRANCH"
+            echo "exists=$BRANCH_EXISTS"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Mint an apt-repo-only GitHub App token
+        if: steps.update.outputs.changed == 'true'
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.APT_APP_ID }}
+          private-key: ${{ secrets.APT_APP_PRIVATE_KEY }}
+          owner: abhiksark
+          permission-contents: write
+          permission-pull-requests: write
+          repositories: unfocus-apt
+
+      - name: Push the automation branch
+        if: steps.update.outputs.changed == 'true' && steps.branch.outputs.exists == 'false'
+        env:
+          APP_SLUG: ${{ steps.app-token.outputs['app-slug'] }}
+          APP_TOKEN: ${{ steps.app-token.outputs.token }}
+          BRANCH: ${{ steps.branch.outputs.name }}
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          set -euo pipefail
+          git config user.name "$APP_SLUG[bot]"
+          git config user.email "$APP_SLUG[bot]@users.noreply.github.com"
+          git add -- pool dists public-key.asc
+          git diff --cached --quiet && {
+            echo "Updater reported a change but produced no apt tree diff." >&2
+            exit 1
+          }
+          git commit -m "Update unfocus alpha apt packages to $VERSION"
+          git push \
+            "https://x-access-token:${APP_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+            "HEAD:refs/heads/$BRANCH"
+
+      - name: Open or recover the update pull request
+        if: steps.update.outputs.changed == 'true'
+        env:
+          BRANCH: ${{ steps.branch.outputs.name }}
+          DEB_NAME: ${{ steps.update.outputs.deb_name }}
+          DEB_SHA256: ${{ steps.update.outputs.deb_sha256 }}
+          DEBIAN_VERSION: ${{ steps.update.outputs.debian_version }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          RELEASE_URL: ${{ steps.update.outputs.release_url }}
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          set -euo pipefail
+          PRS=$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$BRANCH" --state all --limit 10 --json state,url)
+          COUNT=$(jq length <<<"$PRS")
+          if [ "$COUNT" -gt 1 ]; then
+            echo "Multiple pull requests already exist for $BRANCH." >&2
+            exit 1
+          fi
+          if [ "$COUNT" -eq 1 ]; then
+            STATE=$(jq -r '.[0].state' <<<"$PRS")
+            URL=$(jq -r '.[0].url' <<<"$PRS")
+            [ "$STATE" = OPEN ] || {
+              echo "$URL is $STATE; refusing to replace or reopen it automatically." >&2
+              exit 1
+            }
+            echo "Existing update pull request: $URL"
+            exit 0
+          fi
+
+          {
+            echo "Automated APT index update for [Unfocus $VERSION]($RELEASE_URL)."
+            echo
+            echo "Verified release artifact:"
+            echo
+            echo "- \`$DEB_NAME\` (Debian version \`$DEBIAN_VERSION\`): \`$DEB_SHA256\`"
+            echo
+            echo "The updater matched SHA256SUMS and rebuilt the signed alpha suite for GitHub Pages."
+            echo "Merge this pull request to publish the apt repository update."
+          } > "$RUNNER_TEMP/pr-body.md"
+          gh pr create \
+            --repo "$GITHUB_REPOSITORY" \
+            --base main \
+            --head "$BRANCH" \
+            --title "Update unfocus alpha apt packages to $VERSION" \
+            --body-file "$RUNNER_TEMP/pr-body.md"

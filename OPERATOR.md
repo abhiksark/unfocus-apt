@@ -47,3 +47,18 @@ curl -fsSL https://abhiksark.github.io/unfocus-apt/public-key.asc \
   | sudo gpg --dearmor -o /usr/share/keyrings/unfocus-archive-keyring.gpg
 # … add source list, apt update, apt install unfocus
 ```
+
+
+## 5. Install the update workflow
+
+The initial push may omit `.github/workflows/` if the local token lacks the
+`workflow` OAuth scope. After granting that scope (or using SSH with an admin
+key), install the workflow:
+
+```sh
+mkdir -p .github/workflows
+cp templates/github-update-alpha.yml .github/workflows/update-alpha.yml
+git add .github/workflows/update-alpha.yml
+git commit -m "Add alpha apt update workflow"
+git push
+```
