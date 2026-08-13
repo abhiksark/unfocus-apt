@@ -44,6 +44,9 @@ cp "$WORK/fixture.deb" "$WORK/pool-src/"
 
 # Assertions
 test -f "$WORK/repo/pool/main/u/unfocus/unfocus_0.0.0~alpha.1-1_amd64.deb"
+test -f "$WORK/repo/pool/main/u/unfocus/unfocus_0.0.0~alpha.1-1_amd64.deb.asc"
+gpg --batch --verify "$WORK/repo/pool/main/u/unfocus/unfocus_0.0.0~alpha.1-1_amd64.deb.asc" \
+  "$WORK/repo/pool/main/u/unfocus/unfocus_0.0.0~alpha.1-1_amd64.deb" >/dev/null 2>&1
 test -f "$WORK/repo/dists/alpha/main/binary-amd64/Packages"
 test -f "$WORK/repo/dists/alpha/main/binary-amd64/Packages.gz"
 test -f "$WORK/repo/dists/alpha/Release"

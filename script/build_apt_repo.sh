@@ -140,6 +140,11 @@ gpg_sign() {
   gpg "${args[@]}" "$@"
 }
 
+# Sign package files (detached) then the suite Release.
+while IFS= read -r -d '' deb; do
+  gpg_sign --detach-sign --armor --output "${deb}.asc" "$deb"
+done < <(find "$OUTPUT/pool" -type f -name '*.deb' -print0 | sort -z)
+
 gpg_sign --clearsign --output "$release_dir/InRelease" "$release_dir/Release"
 gpg_sign --detach-sign --armor --output "$release_dir/Release.gpg" "$release_dir/Release"
 
