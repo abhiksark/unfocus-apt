@@ -1,2 +1,7 @@
 *.swp
 .DS_Store
+gnupg/
+assets/
+apt-signing-key.asc
+*.asc.bak
+update.json

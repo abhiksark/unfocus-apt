@@ -1,0 +1,16 @@
+Package: unfocus
+Version: 0.3.0~alpha.1-1
+Architecture: amd64
+Maintainer: Unfocus contributors <14940119+abhiksark@users.noreply.github.com>
+Installed-Size: 16541
+Depends: libc6, libayatana-appindicator3-1, libwebkit2gtk-4.1-0, libgtk-3-0
+Filename: pool/main/u/unfocus/unfocus_0.3.0~alpha.1-1_amd64.deb
+Size: 3442162
+MD5sum: 8d833d6eacdd28c88084809a8b002f91
+SHA1: 3404c48c4a5db351f85c04a41c6eea892e75623c
+SHA256: 8c5f493fb3329d4242790edd5f4b44e002e7c5b8dd590713af697636c10fc9ca
+Section: utils
+Priority: optional
+Description: Local-first eye-break reminder
+ (none)
+
