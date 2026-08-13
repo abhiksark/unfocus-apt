@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Unfocus APT repository</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 42rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; color: #111; }
+    code, pre { background: #f4f4f5; border-radius: 4px; }
+    pre { padding: 0.75rem 1rem; overflow-x: auto; }
+    code { padding: 0.1em 0.3em; }
+    pre code { padding: 0; background: none; }
+    a { color: #0b5; }
+  </style>
+</head>
+<body>
+  <h1>Unfocus APT repository</h1>
+  <p>
+    Debian and Ubuntu packages for the
+    <a href="https://github.com/abhiksark/unfocus">Unfocus</a> alpha.
+    Suite: <code>alpha</code>. Package: <code>unfocus</code>. Architecture:
+    <code>amd64</code>.
+  </p>
+  <h2>Install</h2>
+  <pre><code>curl -fsSL https://apt.abhik.ai/public-key.asc \
+  | sudo gpg --dearmor -o /usr/share/keyrings/unfocus-archive-keyring.gpg
+
+echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/unfocus-archive-keyring.gpg] https://apt.abhik.ai alpha main' \
+  | sudo tee /etc/apt/sources.list.d/unfocus-alpha.list
+
+sudo apt update
+sudo apt install unfocus</code></pre>
+  <p>
+    Packages appear here after a published Unfocus prerelease is merged into this
+    repository. See the
+    <a href="https://github.com/abhiksark/unfocus/blob/main/docs/install.md">install guide</a>
+    and this repo’s <a href="https://github.com/abhiksark/unfocus-apt">README</a>.
+  </p>
+</body>
+</html>

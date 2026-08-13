@@ -1,5 +1,28 @@
 # Operator setup for unfocus-apt
 
+
+## Custom domain (apt.abhik.ai)
+
+GitHub Pages is configured for **`apt.abhik.ai`**. At your DNS host (Porkbun for
+`abhik.ai`), add:
+
+| Type | Host | Answer |
+| --- | --- | --- |
+| CNAME | `apt` | `abhiksark.github.io` |
+
+Do **not** point `apt` at Vercel. The APT tree is served by GitHub Pages so
+binary packages and signed `InRelease` files stay static and correctly typed.
+
+After DNS propagates, in the GitHub repo: Settings → Pages → verify the domain
+and enable **Enforce HTTPS**.
+
+Confirm:
+
+```sh
+curl -fsSL https://apt.abhik.ai/ | head
+curl -fsSLI https://apt.abhik.ai/dists/alpha/InRelease
+```
+
 ## 1. Archive GPG key
 
 Generate a dedicated APT archive key (do not reuse a personal key):
@@ -33,7 +56,7 @@ Settings → Pages → Build and deployment → Deploy from branch **main** / **
 
 After the first merged package PR, confirm:
 
-`https://abhiksark.github.io/unfocus-apt/dists/alpha/InRelease`
+`https://apt.abhik.ai/dists/alpha/InRelease`
 
 ## 4. First publish
 
@@ -43,7 +66,7 @@ prerelease. Merge the automation PR in this repository, then smoke-test:
 
 ```sh
 # on Ubuntu/Debian
-curl -fsSL https://abhiksark.github.io/unfocus-apt/public-key.asc \
+curl -fsSL https://apt.abhik.ai/public-key.asc \
   | sudo gpg --dearmor -o /usr/share/keyrings/unfocus-archive-keyring.gpg
 # … add source list, apt update, apt install unfocus
 ```
