@@ -102,7 +102,7 @@ build_args=(
   --gpg-key-id "$GPG_KEY_ID"
   --suite alpha
 )
-if [ -n "$PASSPHRASE_FILE" ]; then
+if [ -n "$PASSPHRASE_FILE" ] && [ -s "$PASSPHRASE_FILE" ]; then
   build_args+=(--passphrase-file "$PASSPHRASE_FILE")
 fi
 "$SCRIPT_DIR/build_apt_repo.sh" "${build_args[@]}"

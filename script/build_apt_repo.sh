@@ -134,7 +134,7 @@ hash_line() {
 # Sign Release
 gpg_sign() {
   local args=(--batch --yes --pinentry-mode loopback --local-user "$GPG_KEY_ID")
-  if [ -n "$PASSPHRASE_FILE" ]; then
+  if [ -n "$PASSPHRASE_FILE" ] && [ -s "$PASSPHRASE_FILE" ]; then
     args+=(--passphrase-file "$PASSPHRASE_FILE")
   fi
   gpg "${args[@]}" "$@"
