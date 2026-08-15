@@ -8,7 +8,7 @@ Codename: alpha
 Architectures: amd64
 Components: main
 Description: Unfocus alpha packages
-Date: Thu, 13 Aug 2026 09:06:13 +0000
+Date: Sat, 15 Aug 2026 08:29:06 +0000
 MD5Sum:
  8069951c5866910481df8fc6d06a7674      565 main/binary-amd64/Packages
  9a019cb5582dce6460cb31a9d4468cb6      419 main/binary-amd64/Packages.gz
@@ -17,8 +17,8 @@ SHA256:
  342c7e15860dccb868b0375564b24be7e04e61a158b150255aa9b41105a9cbaf      419 main/binary-amd64/Packages.gz
 -----BEGIN PGP SIGNATURE-----
 
-iHUEARYKAB0WIQQGZR8ldJADDyzq0YhvtYIy/yocAwUCan2JBQAKCRBvtYIy/yoc
-A7xUAQDn7gxx3NHRtt4i+Vp4spfp4I09q6A4XEdP0EO6WQvTqgEA/W9OGv/OErue
-xa0pd0Yj6uXMF4zJR4uf3FjfGpNF4gU=
-=co9m
+iHUEARYKAB0WIQQGZR8ldJADDyzq0YhvtYIy/yocAwUCaoAjUgAKCRBvtYIy/yoc
+A6zFAP9reisEoouaBeu7wJc6fjp8CrqhoMS0nBwOLfr5zFkw1gEA398XWRQ9zAdK
+IXAEfUkd4mju5IYn7HBjfP3XmR2PKwI=
+=+wJ4
 -----END PGP SIGNATURE-----
