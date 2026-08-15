@@ -5,10 +5,10 @@ Codename: alpha
 Architectures: amd64
 Components: main
 Description: Unfocus alpha packages
-Date: Sat, 15 Aug 2026 08:29:06 +0000
+Date: Sat, 15 Aug 2026 08:49:11 +0000
 MD5Sum:
- 8069951c5866910481df8fc6d06a7674      565 main/binary-amd64/Packages
- 9a019cb5582dce6460cb31a9d4468cb6      419 main/binary-amd64/Packages.gz
+ 86202044984da73aeae1523612bbf4ff     1136 main/binary-amd64/Packages
+ 912ec9bb900e1f3b9e209dcde80b05d2      551 main/binary-amd64/Packages.gz
 SHA256:
- e2c7b740f394746448450261f12bc2997da2c7144518e51d08ec65e56908108c      565 main/binary-amd64/Packages
- 342c7e15860dccb868b0375564b24be7e04e61a158b150255aa9b41105a9cbaf      419 main/binary-amd64/Packages.gz
+ 110d204bbba08bed578ef225cfbf54be39ca983952c72732ab6ad5f04541a5a2     1136 main/binary-amd64/Packages
+ 50fd6e3a0c48cf041a8d4da79352a0a4d09466484a28ae17059d6d32ddce82f6      551 main/binary-amd64/Packages.gz

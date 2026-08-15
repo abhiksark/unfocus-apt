@@ -14,3 +14,19 @@ Priority: optional
 Description: Local-first eye-break reminder
  (none)
 
+Package: unfocus
+Version: 0.4.0~alpha.1-1
+Architecture: amd64
+Maintainer: Unfocus contributors <14940119+abhiksark@users.noreply.github.com>
+Installed-Size: 16546
+Depends: libc6, libayatana-appindicator3-1, libwebkit2gtk-4.1-0, libgtk-3-0
+Filename: pool/main/u/unfocus/unfocus_0.4.0~alpha.1-1_amd64.deb
+Size: 3445256
+MD5sum: f6bef4f393cd927b65b01c30e6b8857b
+SHA1: 8fa44d3c077682bba929e0c110ce4e0016198626
+SHA256: a3fd71c15bcd6875cb7385da102f9c5be15dce0dfab01b3c4bf738908dff7051
+Section: utils
+Priority: optional
+Description: Local-first break and reflection app
+ (none)
+
