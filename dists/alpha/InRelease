@@ -8,17 +8,17 @@ Codename: alpha
 Architectures: amd64
 Components: main
 Description: Unfocus alpha packages
-Date: Sat, 15 Aug 2026 08:49:11 +0000
+Date: Sun, 16 Aug 2026 06:11:46 +0000
 MD5Sum:
- 86202044984da73aeae1523612bbf4ff     1136 main/binary-amd64/Packages
- 912ec9bb900e1f3b9e209dcde80b05d2      551 main/binary-amd64/Packages.gz
+ dd87c929500349d1174a1cba1861fb2c     1707 main/binary-amd64/Packages
+ 166a38e92666f856c1b863dee92a2af9      660 main/binary-amd64/Packages.gz
 SHA256:
- 110d204bbba08bed578ef225cfbf54be39ca983952c72732ab6ad5f04541a5a2     1136 main/binary-amd64/Packages
- 50fd6e3a0c48cf041a8d4da79352a0a4d09466484a28ae17059d6d32ddce82f6      551 main/binary-amd64/Packages.gz
+ a4fbcd2b4ad1d558cc20e997b28c8d21b771ac63569fb7f4104a786674d675be     1707 main/binary-amd64/Packages
+ 5d05475c9b7086060125f51a4f60e61c0cb639648713cb39b99b97eb992c775b      660 main/binary-amd64/Packages.gz
 -----BEGIN PGP SIGNATURE-----
 
-iHUEARYKAB0WIQQGZR8ldJADDyzq0YhvtYIy/yocAwUCaoAoBwAKCRBvtYIy/yoc
-A5JGAP45hB2FUsUQkoUzUeKx7e56ZNnma9GVBNZ+uoGavUYLIgD/QaoveCokZ+3W
-KCLU+gJdsi66BLlaPkM+i1DxMkfOAQk=
-=dPzZ
+iHUEARYKAB0WIQQGZR8ldJADDyzq0YhvtYIy/yocAwUCaoFUogAKCRBvtYIy/yoc
+A/cTAQDZaIeQqCQQryai8R+dVtK6RbRekktTNJsXCa4yO1/eIQEAuuE0rG9L1/xK
+wknZwGEhjC+Nys91j92dZyRzzC1X9gQ=
+=lPUq
 -----END PGP SIGNATURE-----
