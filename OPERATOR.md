@@ -45,22 +45,24 @@ workflows. No new secret is required for beta.
 
 ## First or recovery publish
 
-Use the workflow matching the release channel:
+On `abhiksark/unfocus`, use the workflow matching the release channel. These
+guarded source workflows verify the tag and source commit before dispatching
+the downstream update:
 
 ```text
-Actions → Update alpha apt repository → Run workflow → vX.Y.Z-alpha.N
-Actions → Update beta apt repository  → Run workflow → vX.Y.Z-beta.N
+Actions → Dispatch APT alpha update → Run workflow → vX.Y.Z-alpha.N
+Actions → Dispatch APT beta update  → Run workflow → vX.Y.Z-beta.N
 ```
 
 The release must already be a published, non-draft prerelease with the exact
 channel tag and a matching Debian version (`X.Y.Z~alpha.N-1` or
-`X.Y.Z~beta.N-1`). A manual redispatch of identical immutable artifacts is a
-no-op.
+`X.Y.Z~beta.N-1`). The downstream APT workflows do not accept manual runs. A
+source-workflow redispatch of identical immutable artifacts is a no-op.
 
 For local recovery, invoke either `script/update_repo.sh --channel alpha` or
 `script/update_repo.sh --channel beta` with the same inputs used by the
-workflow, then review and push only that channel's pool, suite metadata, and
-`public-key.asc`.
+workflow as a separately reviewed operator action, then review and push only
+that channel's pool, suite metadata, and `public-key.asc`.
 
 ## Install beta (end users)
 

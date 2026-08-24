@@ -76,9 +76,11 @@ package; see the [install guide](https://github.com/abhiksark/unfocus/blob/main/
 
 Published alpha releases dispatch `unfocus-alpha-published`; published beta
 releases dispatch `unfocus-beta-published`. Each updater accepts only its exact
-`vX.Y.Z-<channel>.N` tag form, verifies `SHA256SUMS` and the matching Debian
-version, and rebuilds only that channel. Alpha uses `pool/main/u/unfocus` and
-`dists/alpha`; beta uses `pool/beta/u/unfocus` and `dists/beta`.
+`vX.Y.Z-<channel>.N` tag form, requires the returned immutable release to match
+the dispatched numeric ID and tag exactly, verifies `SHA256SUMS` and the
+matching Debian version, and rebuilds only that channel. Alpha uses
+`pool/main/u/unfocus` and `dists/alpha`; beta uses `pool/beta/u/unfocus` and
+`dists/beta`.
 
 The two direct-push workflows share one non-cancelling concurrency group so
 they cannot update `main` simultaneously. Operator secrets are documented in
