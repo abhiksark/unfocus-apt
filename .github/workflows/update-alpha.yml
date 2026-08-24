@@ -3,12 +3,6 @@ name: Update alpha apt repository
 on:
   repository_dispatch:
     types: [unfocus-alpha-published]
-  workflow_dispatch:
-    inputs:
-      tag_name:
-        description: Published Unfocus prerelease tag to bootstrap or recover
-        required: true
-        type: string
 
 permissions:
   contents: read
@@ -77,28 +71,16 @@ jobs:
       - name: Re-query the release and download required assets
         id: release
         env:
-          EVENT_NAME: ${{ github.event_name }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          INPUT_TAG: ${{ inputs.tag_name }}
           PAYLOAD_RELEASE_ID: ${{ github.event.client_payload.release_id }}
           PAYLOAD_SOURCE_REPOSITORY: ${{ github.event.client_payload.source_repository }}
           PAYLOAD_TAG: ${{ github.event.client_payload.tag_name }}
         run: |
           set -euo pipefail
 
-          if [ "$EVENT_NAME" = repository_dispatch ]; then
-            SOURCE_REPOSITORY=$PAYLOAD_SOURCE_REPOSITORY
-            RELEASE_ID=$PAYLOAD_RELEASE_ID
-            TAG_NAME=$PAYLOAD_TAG
-          else
-            SOURCE_REPOSITORY=abhiksark/unfocus
-            TAG_NAME=$INPUT_TAG
-            [[ "$TAG_NAME" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)-alpha\.(0|[1-9][0-9]*)$ ]] || {
-              echo "Manual runs require an exact vX.Y.Z-alpha.N tag." >&2
-              exit 1
-            }
-            RELEASE_ID=$(gh api "repos/$SOURCE_REPOSITORY/releases/tags/$TAG_NAME" --jq .id)
-          fi
+          SOURCE_REPOSITORY=$PAYLOAD_SOURCE_REPOSITORY
+          RELEASE_ID=$PAYLOAD_RELEASE_ID
+          TAG_NAME=$PAYLOAD_TAG
 
           [ "$SOURCE_REPOSITORY" = abhiksark/unfocus ] || {
             echo "Unexpected source repository: $SOURCE_REPOSITORY" >&2
@@ -114,9 +96,24 @@ jobs:
           }
 
           gh api "repos/$SOURCE_REPOSITORY/releases/$RELEASE_ID" > "$RUNNER_TEMP/release.json"
+          RETURNED_RELEASE_ID=$(jq -r .id "$RUNNER_TEMP/release.json")
+          RETURNED_TAG_NAME=$(jq -r .tag_name "$RUNNER_TEMP/release.json")
           DRAFT=$(jq -r .draft "$RUNNER_TEMP/release.json")
+          IMMUTABLE=$(jq -r .immutable "$RUNNER_TEMP/release.json")
           PRERELEASE=$(jq -r .prerelease "$RUNNER_TEMP/release.json")
           PUBLISHED_AT=$(jq -r .published_at "$RUNNER_TEMP/release.json")
+          [[ "$RETURNED_RELEASE_ID" =~ ^[0-9]+$ ]] && [ "$RETURNED_RELEASE_ID" = "$RELEASE_ID" ] || {
+            echo "Returned release id does not match dispatch: $RETURNED_RELEASE_ID" >&2
+            exit 1
+          }
+          [ "$RETURNED_TAG_NAME" = "$TAG_NAME" ] || {
+            echo "Returned release tag does not match dispatch: $RETURNED_TAG_NAME" >&2
+            exit 1
+          }
+          [ "$IMMUTABLE" = true ] || {
+            echo "$TAG_NAME is not immutable." >&2
+            exit 1
+          }
           [ "$DRAFT" = false ] && [ "$PRERELEASE" = true ] && [ "$PUBLISHED_AT" != null ] && [ -n "$PUBLISHED_AT" ] || {
             echo "$TAG_NAME is not a published, non-draft prerelease." >&2
             exit 1
