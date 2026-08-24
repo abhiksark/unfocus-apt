@@ -5,10 +5,10 @@ Codename: beta
 Architectures: amd64
 Components: main
 Description: Unfocus beta packages
-Date: Mon, 24 Aug 2026 13:24:47 +0000
+Date: Mon, 24 Aug 2026 15:44:38 +0000
 MD5Sum:
- 6d82bb6c4e0dbf8208e4627e05592332      569 main/binary-amd64/Packages
- 2982c422b62811ed6f9f8603447c531e      421 main/binary-amd64/Packages.gz
+ 20ae5eb8c3dcd640386c8f7bbb424408     1138 main/binary-amd64/Packages
+ 9950eef681eab92a108fc49ba00d8476      539 main/binary-amd64/Packages.gz
 SHA256:
- 4dd3f16fb2324c30418b173ed10ac78d2c6e80d695d40495e01b989732d5c51d      569 main/binary-amd64/Packages
- 80687b77eba36fd403fe3baf47416bb242688b1c7ac0da03b5c3176445e3a5be      421 main/binary-amd64/Packages.gz
+ 048261fe5ff113b2e02ac6487aab3121027b586e54b8b3a6af59ee2452c6ee7f     1138 main/binary-amd64/Packages
+ 90a9585357b5aa26282e0d22f032f4338245772b7bfa92becfc2179b0eda8bed      539 main/binary-amd64/Packages.gz
