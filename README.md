@@ -76,7 +76,7 @@ package; see the [install guide](https://github.com/abhiksark/unfocus/blob/main/
 
 Published alpha releases dispatch `unfocus-alpha-published`; published beta
 releases dispatch `unfocus-beta-published`. Each updater accepts only its exact
-`X.Y.Z-<channel>.N` tag form, verifies `SHA256SUMS` and the matching Debian
+`vX.Y.Z-<channel>.N` tag form, verifies `SHA256SUMS` and the matching Debian
 version, and rebuilds only that channel. Alpha uses `pool/main/u/unfocus` and
 `dists/alpha`; beta uses `pool/beta/u/unfocus` and `dists/beta`.
 

@@ -57,9 +57,10 @@ channel tag and a matching Debian version (`X.Y.Z~alpha.N-1` or
 `X.Y.Z~beta.N-1`). A manual redispatch of identical immutable artifacts is a
 no-op.
 
-For local recovery, invoke `script/update_repo.sh --channel alpha|beta` with
-the same inputs used by the workflow, then review and push only that channel's
-pool, suite metadata, and `public-key.asc`.
+For local recovery, invoke either `script/update_repo.sh --channel alpha` or
+`script/update_repo.sh --channel beta` with the same inputs used by the
+workflow, then review and push only that channel's pool, suite metadata, and
+`public-key.asc`.
 
 ## Install beta (end users)
 
