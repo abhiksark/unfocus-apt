@@ -1,15 +1,12 @@
 #!/usr/bin/env bash
-# Build a signed APT repository tree for Unfocus alpha.
+# Build one signed Unfocus APT channel.
 # Usage:
-#   build_apt_repo.sh --pool-src DIR --output DIR --gpg-home DIR --gpg-key-id ID
-#                     [--suite alpha] [--origin Unfocus] [--label Unfocus]
-#
-# Expects .deb files under --pool-src (flat or nested). Copies them into
-# pool/main/u/unfocus/ with Debian-style basenames, then writes dists/<suite>/
-# indexes and GPG-signed InRelease + Release.gpg.
+#   build_apt_repo.sh --channel alpha|beta --pool-src DIR --output DIR
+#                     --gpg-home DIR --gpg-key-id ID --source-date-epoch EPOCH
+#                     [--origin Unfocus] [--label Unfocus]
 set -euo pipefail
 
-SUITE=alpha
+CHANNEL=
 ORIGIN=Unfocus
 LABEL=Unfocus
 POOL_SRC=
@@ -17,22 +14,24 @@ OUTPUT=
 GPG_HOME=
 GPG_KEY_ID=
 PASSPHRASE_FILE=
+SOURCE_DATE_EPOCH=
 COMPONENT=main
 ARCH=amd64
 
 usage() {
-  echo "usage: $0 --pool-src DIR --output DIR --gpg-home DIR --gpg-key-id ID [--suite NAME]" >&2
+  echo "usage: $0 --channel alpha|beta --pool-src DIR --output DIR --gpg-home DIR --gpg-key-id ID --source-date-epoch EPOCH" >&2
   exit 2
 }
 
 while [ $# -gt 0 ]; do
   case "$1" in
+    --channel) CHANNEL=$2; shift 2 ;;
     --pool-src) POOL_SRC=$2; shift 2 ;;
     --output) OUTPUT=$2; shift 2 ;;
     --gpg-home) GPG_HOME=$2; shift 2 ;;
     --gpg-key-id) GPG_KEY_ID=$2; shift 2 ;;
     --passphrase-file) PASSPHRASE_FILE=$2; shift 2 ;;
-    --suite) SUITE=$2; shift 2 ;;
+    --source-date-epoch) SOURCE_DATE_EPOCH=$2; shift 2 ;;
     --origin) ORIGIN=$2; shift 2 ;;
     --label) LABEL=$2; shift 2 ;;
     -h|--help) usage ;;
@@ -40,10 +39,26 @@ while [ $# -gt 0 ]; do
   esac
 done
 
+case "$CHANNEL" in
+  alpha)
+    POOL_PATH=pool/main/u/unfocus
+    POOL_SCAN=pool/main
+    ;;
+  beta)
+    POOL_PATH=pool/beta/u/unfocus
+    POOL_SCAN=pool/beta
+    ;;
+  *)
+    echo "--channel must be alpha or beta" >&2
+    exit 1
+    ;;
+esac
+
 [ -n "$POOL_SRC" ] && [ -d "$POOL_SRC" ] || { echo "--pool-src must be a directory" >&2; exit 1; }
 [ -n "$OUTPUT" ] || { echo "--output is required" >&2; exit 1; }
 [ -n "$GPG_HOME" ] && [ -d "$GPG_HOME" ] || { echo "--gpg-home must be a directory" >&2; exit 1; }
 [ -n "$GPG_KEY_ID" ] || { echo "--gpg-key-id is required" >&2; exit 1; }
+[[ "$SOURCE_DATE_EPOCH" =~ ^[0-9]+$ ]] || { echo "--source-date-epoch must be a non-negative integer" >&2; exit 1; }
 
 command -v dpkg-deb >/dev/null
 command -v dpkg-scanpackages >/dev/null
@@ -54,10 +69,9 @@ command -v sha256sum >/dev/null
 export GNUPGHOME=$GPG_HOME
 
 rm -rf "$OUTPUT"
-mkdir -p "$OUTPUT/pool/${COMPONENT}/u/unfocus"
-mkdir -p "$OUTPUT/dists/${SUITE}/${COMPONENT}/binary-${ARCH}"
+mkdir -p "$OUTPUT/$POOL_PATH"
+mkdir -p "$OUTPUT/dists/$CHANNEL/$COMPONENT/binary-$ARCH"
 
-# Collect debs and place with package_version_arch.deb names
 mapfile -t DEBS < <(find "$POOL_SRC" -type f -name '*.deb' | sort)
 if [ "${#DEBS[@]}" -eq 0 ]; then
   echo "no .deb files under $POOL_SRC" >&2
@@ -70,10 +84,13 @@ for deb in "${DEBS[@]}"; do
   arch=$(dpkg-deb --field "$deb" Architecture)
   [ "$pkg" = unfocus ] || { echo "$deb Package is $pkg, expected unfocus" >&2; exit 1; }
   [ "$arch" = "$ARCH" ] || { echo "$deb Architecture is $arch, expected $ARCH" >&2; exit 1; }
-  # Debian filenames use the version as-is; ~ is allowed
-  dest="$OUTPUT/pool/${COMPONENT}/u/unfocus/${pkg}_${ver}_${arch}.deb"
+  [[ "$ver" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)~${CHANNEL}\.(0|[1-9][0-9]*)-1$ ]] || {
+    echo "$deb has Debian version $ver; expected an $CHANNEL Debian version X.Y.Z~$CHANNEL.N-1" >&2
+    exit 1
+  }
+
+  dest="$OUTPUT/$POOL_PATH/${pkg}_${ver}_${arch}.deb"
   if [ -e "$dest" ]; then
-    # Identical content is ok (rebuild); different content is not
     if ! cmp -s "$deb" "$dest"; then
       echo "conflicting package already at $dest" >&2
       exit 1
@@ -83,26 +100,23 @@ for deb in "${DEBS[@]}"; do
   fi
 done
 
-# Indexes: run from output root so Filename fields are pool/...
 (
   cd "$OUTPUT"
-  dpkg-scanpackages -m "pool/${COMPONENT}" /dev/null \
-    > "dists/${SUITE}/${COMPONENT}/binary-${ARCH}/Packages"
+  dpkg-scanpackages -m "$POOL_SCAN" /dev/null \
+    > "dists/$CHANNEL/$COMPONENT/binary-$ARCH/Packages"
 )
-gzip -9n -c "$OUTPUT/dists/${SUITE}/${COMPONENT}/binary-${ARCH}/Packages" \
-  > "$OUTPUT/dists/${SUITE}/${COMPONENT}/binary-${ARCH}/Packages.gz"
+gzip -9n -c "$OUTPUT/dists/$CHANNEL/$COMPONENT/binary-$ARCH/Packages" \
+  > "$OUTPUT/dists/$CHANNEL/$COMPONENT/binary-$ARCH/Packages.gz"
 
-# Release file for the suite
-release_dir="$OUTPUT/dists/${SUITE}"
-packages_path="${COMPONENT}/binary-${ARCH}/Packages"
-packages_gz_path="${COMPONENT}/binary-${ARCH}/Packages.gz"
+release_dir="$OUTPUT/dists/$CHANNEL"
+packages_path="$COMPONENT/binary-$ARCH/Packages"
+packages_gz_path="$COMPONENT/binary-$ARCH/Packages.gz"
 
 hash_line() {
   local algo=$1 file=$2
   local path="$release_dir/$file"
-  local size
+  local size digest
   size=$(stat -c%s "$path")
-  local digest
   if [ "$algo" = MD5Sum ]; then
     digest=$(md5sum "$path" | awk '{print $1}')
   elif [ "$algo" = SHA256 ]; then
@@ -115,14 +129,14 @@ hash_line() {
 }
 
 {
-  echo "Origin: ${ORIGIN}"
-  echo "Label: ${LABEL}"
-  echo "Suite: ${SUITE}"
-  echo "Codename: ${SUITE}"
-  echo "Architectures: ${ARCH}"
-  echo "Components: ${COMPONENT}"
-  echo "Description: Unfocus ${SUITE} packages"
-  echo "Date: $(date -Ru)"
+  echo "Origin: $ORIGIN"
+  echo "Label: $LABEL"
+  echo "Suite: $CHANNEL"
+  echo "Codename: $CHANNEL"
+  echo "Architectures: $ARCH"
+  echo "Components: $COMPONENT"
+  echo "Description: Unfocus $CHANNEL packages"
+  echo "Date: $(date -Ru --date="@$SOURCE_DATE_EPOCH")"
   echo "MD5Sum:"
   hash_line MD5Sum "$packages_path"
   hash_line MD5Sum "$packages_gz_path"
@@ -131,21 +145,25 @@ hash_line() {
   hash_line SHA256 "$packages_gz_path"
 } > "$release_dir/Release"
 
-# Sign Release
 gpg_sign() {
-  local args=(--batch --yes --pinentry-mode loopback --local-user "$GPG_KEY_ID")
+  local args=(
+    --batch
+    --yes
+    --pinentry-mode loopback
+    --faked-system-time "${SOURCE_DATE_EPOCH}!"
+    --local-user "$GPG_KEY_ID"
+  )
   if [ -n "$PASSPHRASE_FILE" ] && [ -s "$PASSPHRASE_FILE" ]; then
     args+=(--passphrase-file "$PASSPHRASE_FILE")
   fi
   gpg "${args[@]}" "$@"
 }
 
-# Sign package files (detached) then the suite Release.
 while IFS= read -r -d '' deb; do
   gpg_sign --detach-sign --armor --output "${deb}.asc" "$deb"
-done < <(find "$OUTPUT/pool" -type f -name '*.deb' -print0 | sort -z)
+done < <(find "$OUTPUT/$POOL_PATH" -type f -name '*.deb' -print0 | sort -z)
 
 gpg_sign --clearsign --output "$release_dir/InRelease" "$release_dir/Release"
 gpg_sign --detach-sign --armor --output "$release_dir/Release.gpg" "$release_dir/Release"
 
-echo "built apt repo at $OUTPUT (${#DEBS[@]} package(s), suite ${SUITE})"
+echo "built apt repo at $OUTPUT (${#DEBS[@]} package(s), channel $CHANNEL)"

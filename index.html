@@ -16,25 +16,33 @@
 <body>
   <h1>Unfocus APT repository</h1>
   <p>
-    Debian and Ubuntu packages for the
-    <a href="https://github.com/abhiksark/unfocus">Unfocus</a> alpha.
-    Suite: <code>alpha</code>. Package: <code>unfocus</code>. Architecture:
+    Debian and Ubuntu prerelease packages for
+    <a href="https://github.com/abhiksark/unfocus">Unfocus</a>.
+    The current channel is <code>beta</code>; the <code>alpha</code> suite is
+    frozen for existing users. Package: <code>unfocus</code>. Architecture:
     <code>amd64</code>.
   </p>
-  <h2>Install</h2>
+  <h2>Install beta</h2>
   <pre><code>curl -fsSL https://apt.abhik.ai/public-key.asc \
   | sudo gpg --dearmor -o /usr/share/keyrings/unfocus-archive-keyring.gpg
 
-echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/unfocus-archive-keyring.gpg] https://apt.abhik.ai alpha main' \
-  | sudo tee /etc/apt/sources.list.d/unfocus-alpha.list
+echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/unfocus-archive-keyring.gpg] https://apt.abhik.ai beta main' \
+  | sudo tee /etc/apt/sources.list.d/unfocus-beta.list
 
 sudo apt update
 sudo apt install unfocus</code></pre>
+  <h2>Move from alpha to beta</h2>
+  <pre><code>sudo rm -f /etc/apt/sources.list.d/unfocus-alpha.list
+echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/unfocus-archive-keyring.gpg] https://apt.abhik.ai beta main' \
+  | sudo tee /etc/apt/sources.list.d/unfocus-beta.list
+sudo apt update
+sudo apt install --only-upgrade unfocus</code></pre>
   <p>
-    Packages appear here after a published Unfocus prerelease is merged into this
-    repository. See the
+    Migration is explicit; installations that keep the alpha source receive no
+    beta update. See the
     <a href="https://github.com/abhiksark/unfocus/blob/main/docs/install.md">install guide</a>
-    and this repo’s <a href="https://github.com/abhiksark/unfocus-apt">README</a>.
+    and this repository’s
+    <a href="https://github.com/abhiksark/unfocus-apt">README</a>.
   </p>
 </body>
 </html>
