@@ -1,0 +1,16 @@
+Package: unfocus
+Version: 0.6.0~beta.1-1
+Architecture: amd64
+Maintainer: Unfocus contributors <14940119+abhiksark@users.noreply.github.com>
+Installed-Size: 18127
+Depends: libc6, libayatana-appindicator3-1, libwebkit2gtk-4.1-0, libgtk-3-0
+Filename: pool/beta/u/unfocus/unfocus_0.6.0~beta.1-1_amd64.deb
+Size: 4842070
+MD5sum: 7abd847fe8be8aa4304ff6e79356cfd0
+SHA1: d61fbb5634f000e32fbf2453d1309c5fd3f313e0
+SHA256: f2d6a502378960af929c0345ce352f49230f32123cc059170c1db6ed3615af03
+Section: utils
+Priority: optional
+Description: Local-first break and reflection app
+ (none)
+

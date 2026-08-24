@@ -1,0 +1,24 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+Origin: Unfocus
+Label: Unfocus
+Suite: beta
+Codename: beta
+Architectures: amd64
+Components: main
+Description: Unfocus beta packages
+Date: Mon, 24 Aug 2026 13:24:47 +0000
+MD5Sum:
+ 6d82bb6c4e0dbf8208e4627e05592332      569 main/binary-amd64/Packages
+ 2982c422b62811ed6f9f8603447c531e      421 main/binary-amd64/Packages.gz
+SHA256:
+ 4dd3f16fb2324c30418b173ed10ac78d2c6e80d695d40495e01b989732d5c51d      569 main/binary-amd64/Packages
+ 80687b77eba36fd403fe3baf47416bb242688b1c7ac0da03b5c3176445e3a5be      421 main/binary-amd64/Packages.gz
+-----BEGIN PGP SIGNATURE-----
+
+iHUEARYKAB0WIQQGZR8ldJADDyzq0YhvtYIy/yocAwUCaoxGHwAKCRBvtYIy/yoc
+A92TAP0cjF17ebapyef0vfXQtRPRYG1EYvKxv4nJoi3v6iGQsgD/b8xM9frE2Fv7
+hbx4P3Wl4hsVc9qBquGp1l/3sjlW1g8=
+=PjAy
+-----END PGP SIGNATURE-----
