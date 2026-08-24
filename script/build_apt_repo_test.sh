@@ -155,7 +155,10 @@ test -f "$WORK/repository/dists/beta/InRelease"
 test "$alpha_before" = "$(tree_digest "$WORK/repository" pool/main/u/unfocus dists/alpha)"
 grep -q '^Version: 0.6.0~beta.1-1$' \
   "$WORK/repository/dists/beta/main/binary-amd64/Packages"
-! grep -q '~beta\.' "$WORK/repository/dists/alpha/main/binary-amd64/Packages"
+if grep -q '~beta\.' "$WORK/repository/dists/alpha/main/binary-amd64/Packages"; then
+  echo "beta version leaked into the alpha Packages index" >&2
+  exit 1
+fi
 
 published_before=$(tree_digest "$WORK/repository" pool dists public-key.asc)
 "$UPDATE" "${common_update_args[@]}" --metadata "$WORK/second-update.json"
