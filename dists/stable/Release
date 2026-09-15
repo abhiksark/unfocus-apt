@@ -1,0 +1,14 @@
+Origin: Unfocus
+Label: Unfocus
+Suite: stable
+Codename: stable
+Architectures: amd64
+Components: main
+Description: Unfocus stable packages
+Date: Tue, 15 Sep 2026 20:16:58 +0000
+MD5Sum:
+ 14fa584f915d93b473728e9528d3c484      557 main/binary-amd64/Packages
+ 18793937e05d45d803ab1b62d5ab0684      414 main/binary-amd64/Packages.gz
+SHA256:
+ c047d0883585a556d017586c7596e1900bc5c5b9bf7934a311d98f5edc091515      557 main/binary-amd64/Packages
+ 0739234a2d8ba8edfc4f19e5b4c1fa3e8c00d836739f624eab7da03b6621c4df      414 main/binary-amd64/Packages.gz
