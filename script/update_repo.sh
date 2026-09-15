@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Verify one published Unfocus prerelease package and update only its APT channel.
+# Verify one published Unfocus package and update only its APT channel.
 set -euo pipefail
 
 EXPECTED_REPOSITORY=abhiksark/unfocus
@@ -16,7 +16,7 @@ SOURCE_DATE_EPOCH=
 METADATA=
 
 usage() {
-  echo "usage: $0 --channel alpha|beta --source-repository OWNER/REPO --release-id ID --tag-name TAG --assets-dir DIR --repo-root DIR --gpg-home DIR --gpg-key-id ID --source-date-epoch EPOCH --metadata FILE" >&2
+  echo "usage: $0 --channel alpha|beta|stable --source-repository OWNER/REPO --release-id ID --tag-name TAG --assets-dir DIR --repo-root DIR --gpg-home DIR --gpg-key-id ID --source-date-epoch EPOCH --metadata FILE" >&2
   exit 2
 }
 
@@ -41,7 +41,8 @@ done
 case "$CHANNEL" in
   alpha) POOL_PATH=pool/main/u/unfocus ;;
   beta) POOL_PATH=pool/beta/u/unfocus ;;
-  *) echo "--channel must be alpha or beta" >&2; exit 1 ;;
+  stable) POOL_PATH=pool/stable/u/unfocus ;;
+  *) echo "--channel must be alpha, beta, or stable" >&2; exit 1 ;;
 esac
 
 [ "$SOURCE_REPOSITORY" = "$EXPECTED_REPOSITORY" ] || {
@@ -49,15 +50,23 @@ esac
   exit 1
 }
 [[ "$RELEASE_ID" =~ ^[0-9]+$ ]] || { echo "release id must be numeric" >&2; exit 1; }
-tag_pattern="^v(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)-${CHANNEL}\\.(0|[1-9][0-9]*)$"
+if [ "$CHANNEL" = stable ]; then
+  tag_pattern='^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
+else
+  tag_pattern="^v(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)-${CHANNEL}\\.(0|[1-9][0-9]*)$"
+fi
 [[ "$TAG_NAME" =~ $tag_pattern ]] || {
-  echo "tag must be an exact $CHANNEL prerelease (vX.Y.Z-$CHANNEL.N): $TAG_NAME" >&2
+  echo "tag must be an exact $CHANNEL version: $TAG_NAME" >&2
   exit 1
 }
 CORE_VERSION="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.${BASH_REMATCH[3]}"
-CHANNEL_NUMBER=${BASH_REMATCH[4]}
 VERSION=${TAG_NAME#v}
-EXPECTED_DEBIAN_VERSION="$CORE_VERSION~$CHANNEL.$CHANNEL_NUMBER-1"
+if [ "$CHANNEL" = stable ]; then
+  EXPECTED_DEBIAN_VERSION="$CORE_VERSION-1"
+else
+  CHANNEL_NUMBER=${BASH_REMATCH[4]}
+  EXPECTED_DEBIAN_VERSION="$CORE_VERSION~$CHANNEL.$CHANNEL_NUMBER-1"
+fi
 DEB_NAME="Unfocus_${VERSION}_amd64.deb"
 
 [ -d "$ASSETS_DIR" ] || { echo "assets dir missing" >&2; exit 1; }
@@ -98,6 +107,15 @@ existing_package="$REPO_ROOT/$POOL_PATH/unfocus_${ver}_amd64.deb"
 if [ -f "$existing_package" ] && ! cmp -s "$ASSETS_DIR/$DEB_NAME" "$existing_package"; then
   echo "published $CHANNEL package $ver differs from the immutable release asset" >&2
   exit 1
+fi
+if [ -d "$REPO_ROOT/$POOL_PATH" ]; then
+  while IFS= read -r published_package; do
+    published_version=$(dpkg-deb --field "$published_package" Version)
+    if dpkg --compare-versions "$published_version" gt "$ver"; then
+      echo "refusing to downgrade $CHANNEL from $published_version to $ver" >&2
+      exit 1
+    fi
+  done < <(find "$REPO_ROOT/$POOL_PATH" -type f -name '*.deb' | sort)
 fi
 if [ -d "$REPO_ROOT/$POOL_PATH" ]; then
   find "$REPO_ROOT/$POOL_PATH" -type f -name '*.deb' -exec cp -a {} "$WORK/pool-src/" \;

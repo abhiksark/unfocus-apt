@@ -16,6 +16,7 @@ Enforce HTTPS in Settings → Pages after the certificate is issued.
 | --- | --- | --- | --- |
 | Alpha (frozen) | `unfocus-alpha-published` | `pool/main/u/unfocus` | `dists/alpha` |
 | Beta | `unfocus-beta-published` | `pool/beta/u/unfocus` | `dists/beta` |
+| Stable | `unfocus-stable-published` | `pool/stable/u/unfocus` | `dists/stable` |
 
 Both update workflows use the `update-unfocus-apt` concurrency group with
 `cancel-in-progress: false`. Keep that group shared so their direct pushes to
@@ -40,8 +41,8 @@ public half is committed as `public-key.asc` and served at
 | --- | --- |
 | `APT_DISPATCH_TOKEN` | Token limited to creating `repository_dispatch` events on `unfocus-apt` |
 
-The source repository uses this token in its alpha and beta APT dispatch
-workflows. No new secret is required for beta.
+The source repository uses this token in its alpha, beta, and stable APT
+dispatch workflows. No new secret is required for stable.
 
 ## First or recovery publish
 
@@ -52,19 +53,25 @@ the downstream update:
 ```text
 Actions → Dispatch APT alpha update → Run workflow → vX.Y.Z-alpha.N
 Actions → Dispatch APT beta update  → Run workflow → vX.Y.Z-beta.N
+Actions → Dispatch APT stable update → Run workflow → vX.Y.Z
 ```
 
-The release must already be a published, non-draft prerelease with the exact
-channel tag and a matching Debian version (`X.Y.Z~alpha.N-1` or
-`X.Y.Z~beta.N-1`). The downstream APT workflows do not accept manual runs. A
+The release must already be published, immutable, and non-draft with the exact
+channel state and matching Debian version (`X.Y.Z~alpha.N-1`,
+`X.Y.Z~beta.N-1`, or stable `X.Y.Z-1`). The downstream APT workflows do not accept manual runs. A
 source-workflow redispatch of identical immutable artifacts is a no-op.
 
-For local recovery, invoke either `script/update_repo.sh --channel alpha` or
-`script/update_repo.sh --channel beta` with the same inputs used by the
+For local recovery, invoke `script/update_repo.sh` with `--channel alpha`,
+`--channel beta`, or `--channel stable` and the same inputs used by the
 workflow as a separately reviewed operator action, then review and push only
 that channel's pool, suite metadata, and `public-key.asc`.
 
 ## Install beta (end users)
+
+Stable commands remain pending until the first stable release and receiver
+updates are published. Then disable the beta source without purging Unfocus,
+add the `stable` suite as `unfocus-stable.list`, and run `apt update` followed
+by `apt install unfocus`; local application data remains in place.
 
 ```sh
 curl -fsSL https://apt.abhik.ai/public-key.asc \

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Build one signed Unfocus APT channel.
 # Usage:
-#   build_apt_repo.sh --channel alpha|beta --pool-src DIR --output DIR
+#   build_apt_repo.sh --channel alpha|beta|stable --pool-src DIR --output DIR
 #                     --gpg-home DIR --gpg-key-id ID --source-date-epoch EPOCH
 #                     [--origin Unfocus] [--label Unfocus]
 set -euo pipefail
@@ -19,7 +19,7 @@ COMPONENT=main
 ARCH=amd64
 
 usage() {
-  echo "usage: $0 --channel alpha|beta --pool-src DIR --output DIR --gpg-home DIR --gpg-key-id ID --source-date-epoch EPOCH" >&2
+  echo "usage: $0 --channel alpha|beta|stable --pool-src DIR --output DIR --gpg-home DIR --gpg-key-id ID --source-date-epoch EPOCH" >&2
   exit 2
 }
 
@@ -48,8 +48,12 @@ case "$CHANNEL" in
     POOL_PATH=pool/beta/u/unfocus
     POOL_SCAN=pool/beta
     ;;
+  stable)
+    POOL_PATH=pool/stable/u/unfocus
+    POOL_SCAN=pool/stable
+    ;;
   *)
-    echo "--channel must be alpha or beta" >&2
+    echo "--channel must be alpha, beta, or stable" >&2
     exit 1
     ;;
 esac
@@ -84,8 +88,17 @@ for deb in "${DEBS[@]}"; do
   arch=$(dpkg-deb --field "$deb" Architecture)
   [ "$pkg" = unfocus ] || { echo "$deb Package is $pkg, expected unfocus" >&2; exit 1; }
   [ "$arch" = "$ARCH" ] || { echo "$deb Architecture is $arch, expected $ARCH" >&2; exit 1; }
-  [[ "$ver" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)~${CHANNEL}\.(0|[1-9][0-9]*)-1$ ]] || {
-    echo "$deb has Debian version $ver; expected an $CHANNEL Debian version X.Y.Z~$CHANNEL.N-1" >&2
+  if [ "$CHANNEL" = stable ]; then
+    version_pattern='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)-1$'
+    expected_version='X.Y.Z-1'
+  else
+    version_pattern="^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)~${CHANNEL}\\.(0|[1-9][0-9]*)-1$"
+    expected_version="X.Y.Z~$CHANNEL.N-1"
+  fi
+  [[ "$ver" =~ $version_pattern ]] || {
+    article=a
+    case "$CHANNEL" in alpha) article=an ;; esac
+    echo "$deb has Debian version $ver; expected $article $CHANNEL Debian version $expected_version" >&2
     exit 1
   }
 

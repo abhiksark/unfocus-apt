@@ -7,7 +7,9 @@ This repository holds only the APT tree (`pool/`, `dists/`) and automation.
 Application source and release packaging live in
 [abhiksark/unfocus](https://github.com/abhiksark/unfocus).
 
-There is no stable suite yet. New prereleases are published to **`beta`**.
+The stable suite automation is ready but must not be advertised as available
+until the first stable release and receiver update are published. New
+prereleases continue to be published to **`beta`**.
 The **`alpha`** suite remains installable but is frozen at its last alpha.
 
 ## Install beta
@@ -74,13 +76,14 @@ package; see the [install guide](https://github.com/abhiksark/unfocus/blob/main/
 
 ## Automation
 
-Published alpha releases dispatch `unfocus-alpha-published`; published beta
-releases dispatch `unfocus-beta-published`. Each updater accepts only its exact
-`vX.Y.Z-<channel>.N` tag form, requires the returned immutable release to match
+Published channels dispatch `unfocus-alpha-published`,
+`unfocus-beta-published`, or `unfocus-stable-published`. Each updater accepts
+only its exact tag form, including `vX.Y.Z` for stable, and requires the returned immutable release to match
 the dispatched numeric ID and tag exactly, verifies `SHA256SUMS` and the
 matching Debian version, and rebuilds only that channel. Alpha uses
 `pool/main/u/unfocus` and `dists/alpha`; beta uses `pool/beta/u/unfocus` and
-`dists/beta`.
+`dists/beta`; stable uses `pool/stable/u/unfocus` and `dists/stable` with
+Debian version `X.Y.Z-1`.
 
 The two direct-push workflows share one non-cancelling concurrency group so
 they cannot update `main` simultaneously. Operator secrets are documented in
