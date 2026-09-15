@@ -7,7 +7,8 @@ class WorkflowContractTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
   WORKFLOWS = {
     "alpha" => File.join(ROOT, ".github/workflows/update-alpha.yml"),
-    "beta" => File.join(ROOT, ".github/workflows/update-beta.yml")
+    "beta" => File.join(ROOT, ".github/workflows/update-beta.yml"),
+    "stable" => File.join(ROOT, ".github/workflows/update-stable.yml")
   }.freeze
 
   def test_channel_workflows_accept_only_their_guarded_source_dispatch
@@ -55,5 +56,14 @@ class WorkflowContractTest < Minitest::Test
     assert_includes operator_guide, "On `abhiksark/unfocus`, use the workflow matching the release channel"
     assert_includes operator_guide, "Actions → Dispatch APT alpha update → Run workflow → vX.Y.Z-alpha.N"
     assert_includes operator_guide, "Actions → Dispatch APT beta update  → Run workflow → vX.Y.Z-beta.N"
+    assert_includes operator_guide, "Actions → Dispatch APT stable update → Run workflow → vX.Y.Z"
+  end
+
+  def test_stable_downloads_match_github_asset_digests
+    workflow = YAML.safe_load(File.read(WORKFLOWS.fetch("stable")))
+    release_step = workflow.fetch("jobs").fetch("update").fetch("steps").find { |step| step["id"] == "release" }
+
+    assert_includes release_step.fetch("run"), 'EXPECTED_DIGEST=$(jq -r --arg name "$NAME"'
+    assert_includes release_step.fetch("run"), '[ "$EXPECTED_DIGEST" = "$ACTUAL_DIGEST" ]'
   end
 end
